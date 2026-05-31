@@ -14,7 +14,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBlTqQ-8-Qp2Kf
 //  an internal ops tool. For bank-level security you'd need
 //  a real server, but this is solid for an ice arena. 🧊
 // ============================================================
-const STAFF_PASSWORD = 'icearena'; // ← CHANGE THIS
+const STAFF_PASSWORD = 'Zamboni2000'; // ← CHANGE THIS
 
 // All known seal IDs — edit to match your full seal list exactly
 const ALL_SEALS = [
