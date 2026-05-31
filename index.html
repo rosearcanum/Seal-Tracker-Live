@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Miami Ice Arena — Seal Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🦭</span>
+        <div class="logo-text">
+          <span class="logo-title">SEAL TRACKER</span>
+          <span class="logo-sub">Miami Ice Arena</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="active-count-badge">
+          <span id="activeCount">0</span>
+          <span>ACTIVE</span>
+        </div>
+        <!-- Lock button — only visible when authenticated -->
+        <button class="btn-lock" id="lockBtn" style="display:none" title="Lock staff access">🔒 LOCK</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tab Nav -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="staff">⬡ STAFF / ACTIVATE</button>
+    <button class="tab-btn" data-tab="skateguard">🛡 SKATEGUARD VIEW</button>
+    <button class="tab-btn" data-tab="party">🎉 PARTY SEALS</button>
+  </nav>
+
+  <!-- ===================== STAFF TAB ===================== -->
+  <section class="tab-content active" id="tab-staff">
+
+    <!-- LOCK SCREEN (shown when not authenticated) -->
+    <div class="lock-screen" id="staffLockScreen">
+      <div class="lock-card">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">STAFF ACCESS ONLY</div>
+        <div class="lock-sub">Enter the staff password to activate or manage seals.</div>
+        <input
+          type="password"
+          id="authPasswordInput"
+          class="lock-input"
+          placeholder="Enter password..."
+          autocomplete="off"
+        />
+        <div class="lock-error" id="authError"></div>
+        <button class="btn-activate lock-submit" id="authSubmitBtn">UNLOCK</button>
+      </div>
+    </div>
+
+    <!-- STAFF UI (hidden until authenticated) -->
+    <div id="staffUI" style="display:none">
+      <!-- Search Box -->
+      <div class="search-section">
+        <div class="search-label">ACTIVATE SEAL</div>
+        <div class="search-row">
+          <input
+            type="text"
+            id="sealSearch"
+            class="seal-input"
+            placeholder="Type seal ID (e.g. 57, X, 🛑)..."
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+          />
+          <button class="btn-activate" id="activateBtn">ACTIVATE</button>
+        </div>
+        <div class="search-extras">
+          <input type="number" id="additionalTime" class="extra-input" placeholder="Extra mins (optional)" />
+          <input type="text" id="sealNotes" class="extra-input" placeholder="Notes (optional)" />
+        </div>
+        <div class="search-feedback" id="searchFeedback"></div>
+      </div>
+
+      <!-- Seal Grid -->
+      <div class="grid-section">
+        <div class="section-header">
+          <span class="section-title">ALL SEALS</span>
+          <div class="legend">
+            <span class="legend-dot available"></span><span>Available</span>
+            <span class="legend-dot active-leg"></span><span>Active</span>
+            <span class="legend-dot expired"></span><span>Expired</span>
+          </div>
+        </div>
+        <div class="seal-grid" id="sealGrid"></div>
+      </div>
+
+      <div class="status-bar" id="staffStatus">
+        <span id="lastUpdated">Last synced: —</span>
+        <button class="btn-refresh small" id="staffRefresh">↻ SYNC</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== SKATEGUARD TAB ===================== -->
+  <section class="tab-content" id="tab-skateguard">
+    <div class="skateguard-header">
+      <div class="section-title">ACTIVE SEALS — DUE SOONEST FIRST</div>
+      <button class="btn-refresh" id="skateguardRefresh">↻ REFRESH</button>
+    </div>
+    <!-- Skateguard always sees the list — no lock screen here -->
+    <div class="skateguard-list" id="skateguardList"></div>
+    <div class="status-bar">
+      <span id="skateguardUpdated">Last updated: —</span>
+    </div>
+  </section>
+
+  <!-- ===================== PARTY TAB ===================== -->
+  <section class="tab-content" id="tab-party">
+
+    <!-- LOCK SCREEN for party tab -->
+    <div class="lock-screen" id="partyLockScreen">
+      <div class="lock-card">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">STAFF ACCESS ONLY</div>
+        <div class="lock-sub">Enter the staff password on the Staff tab to unlock party seal management.</div>
+        <button class="btn-activate lock-submit" onclick="switchToStaffTab()">GO TO STAFF LOGIN</button>
+      </div>
+    </div>
+
+    <!-- PARTY UI (hidden until authenticated) -->
+    <div id="partyUI" style="display:none">
+      <div class="search-section">
+        <div class="search-label">ACTIVATE PARTY SEAL</div>
+        <div class="search-row">
+          <input type="text" id="partySealId" class="seal-input" placeholder="Seal ID..." autocomplete="off" spellcheck="false" />
+          <input type="text" id="partyRoom" class="seal-input small" placeholder="Party Room (e.g. A, B)" autocomplete="off" spellcheck="false" />
+          <button class="btn-activate" id="partyActivateBtn">ACTIVATE</button>
+        </div>
+        <div class="search-feedback" id="partyFeedback"></div>
+      </div>
+
+      <div class="grid-section">
+        <div class="section-header">
+          <span class="section-title">PARTY SEALS</span>
+          <span class="party-note">All expire at 5:00 PM</span>
+        </div>
+        <div class="party-list" id="partyList"></div>
+      </div>
+
+      <div class="status-bar">
+        <span id="partyUpdated">Last updated: —</span>
+        <button class="btn-refresh small" id="partyRefresh">↻ SYNC</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-title" id="modalTitle">SEAL ACTION</div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // Helper to switch tabs (used by party lock screen button)
+    function switchToStaffTab() {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+      document.querySelector('[data-tab="staff"]').classList.add('active');
+      document.getElementById('tab-staff').classList.add('active');
+    }
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
