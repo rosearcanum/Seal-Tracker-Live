@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupTabs();
   setupClock();
+  setupTheme();
   setupAuth();
   buildGrid();
   loadData();
@@ -538,4 +539,22 @@ function toast(msg, type = 'info') {
   t.textContent = msg;
   document.getElementById('toastContainer').appendChild(t);
   setTimeout(() => { t.classList.add('fadeOut'); setTimeout(() => t.remove(), 350); }, 3000);
+}
+
+// ============================================================
+//  THEME TOGGLE
+// ============================================================
+function setupTheme() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  // Restore saved preference
+  if (localStorage.getItem('sealTheme') === 'light') {
+    document.body.classList.add('light-mode');
+    btn.textContent = '🌙';
+  }
+  btn.addEventListener('click', () => {
+    const isLight = document.body.classList.toggle('light-mode');
+    btn.textContent = isLight ? '🌙' : '☀️';
+    localStorage.setItem('sealTheme', isLight ? 'light' : 'dark');
+  });
 }
