@@ -672,5 +672,16 @@ body.light-mode header { background: linear-gradient(135deg, #0a3d6b 0%, #1565a8
   .chat-header { padding: 10px 12px; }
   .chat-msg { max-width: 85%; font-size: 13px; }
 
+  /* Bigger chat input + smaller send button on mobile */
+  .chat-input-row { gap: 6px; }
+  .chat-input-row .seal-input {
+    font-size: 16px; padding: 14px 14px;
+  }
+  .chat-input-row .btn-activate {
+    padding: 10px 14px; font-size: 12px;
+    letter-spacing: 1px; flex: 0 0 auto;
+    width: auto; min-width: 0;
+  }
+
   .chat-badge { font-size: 9px; padding: 1px 5px; }
 }
