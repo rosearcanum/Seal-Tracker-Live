@@ -479,3 +479,198 @@ body.light-mode header { background: linear-gradient(135deg, #0a3d6b 0%, #1565a8
   .seal-grid { grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); }
   .logo-sub { display: none; }
 }
+
+/* ============================================================
+   NEW: Party seal grid style (orange instead of blue)
+   ============================================================ */
+.seal-tile.party-type {
+  background: rgba(255,140,0,0.06);
+  border-color: rgba(255,140,0,0.3);
+}
+.seal-tile.party-type.state-available .tile-id { color: var(--orange); }
+.seal-tile.party-type.state-available:hover { background: rgba(255,140,0,0.12); border-color: var(--orange); }
+
+.seal-tile.state-party-active {
+  border-color: var(--orange); background: var(--orange-bg);
+  box-shadow: 0 0 8px rgba(255,140,0,0.18);
+}
+.seal-tile.state-party-active .tile-id { color: var(--orange); text-shadow: 0 0 8px rgba(255,140,0,0.4); }
+
+/* Legend party dot */
+.legend-dot.party { background: var(--orange); box-shadow: 0 0 5px rgba(255,140,0,0.5); }
+
+/* ============================================================
+   NEW: Skateguard row party tag + party variant
+   ============================================================ */
+.sg-id { position: relative; }
+.sg-party-tag {
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 1px;
+  color: var(--orange); margin-top: 2px;
+  text-shadow: 0 0 6px rgba(255,140,0,0.4);
+}
+.sg-row.sg-party { border-left-color: var(--orange); }
+.sg-row.sg-party .sg-id { color: var(--orange); text-shadow: 0 0 8px rgba(255,140,0,0.3); }
+.sg-row.sg-party .sg-time-remaining { color: var(--orange); }
+
+/* ============================================================
+   NEW: History tab
+   ============================================================ */
+.history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+.history-controls { display: flex; gap: 8px; align-items: center; }
+.history-controls .extra-input { width: 180px; flex: 0 0 auto; }
+.history-list { display: flex; flex-direction: column; gap: 5px; }
+
+.history-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px;
+  transition: background 0.2s;
+}
+.history-row.h-rent    { border-left-color: var(--green); }
+.history-row.h-return  { border-left-color: var(--ice-dim); }
+.history-row.h-extend  { border-left-color: var(--gold); }
+.history-row.h-reduce  { border-left-color: var(--red); }
+.history-row.h-party   { border-left-color: var(--orange); }
+
+.h-icon {
+  font-size: 18px; width: 28px; text-align: center;
+  flex-shrink: 0; color: var(--text-dim);
+}
+.h-rent .h-icon    { color: var(--green); }
+.h-return .h-icon  { color: var(--ice); }
+.h-extend .h-icon  { color: var(--gold); }
+.h-reduce .h-icon  { color: var(--red); }
+.h-party .h-icon   { color: var(--orange); }
+
+.h-main { flex: 1; min-width: 0; }
+.h-line1 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.h-seal { font-family: var(--font-mono); font-size: 16px; font-weight: bold; color: var(--text); }
+.h-label { font-size: 13px; color: var(--text-dim); }
+.h-notes { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.h-time { font-family: var(--font-mono); font-size: 13px; color: var(--text-dim); flex-shrink: 0; }
+.history-empty { text-align: center; padding: 40px; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; }
+
+/* ============================================================
+   NEW: Chat tab
+   ============================================================ */
+.chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 12px 16px;
+}
+.chat-name-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.chat-name-label strong { color: var(--ice); }
+.chat-name-change {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 10px; text-decoration: underline; padding: 0 4px;
+}
+.chat-name-change:hover { color: var(--ice); }
+
+.chat-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+.chat-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.chat-status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.chat-status-dot.offline { background: var(--red); }
+
+#chatUI { display: flex !important; flex-direction: column; height: calc(100vh - 220px); min-height: 400px; }
+
+.chat-messages {
+  flex: 1; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 10px;
+}
+.chat-empty { text-align: center; padding: 40px; color: var(--text-muted); font-family: var(--font-mono); }
+
+.chat-msg {
+  max-width: 75%; padding: 8px 12px;
+  border-radius: var(--radius); font-size: 14px;
+  word-wrap: break-word;
+}
+.chat-msg-other {
+  align-self: flex-start;
+  background: var(--bg2); border: 1px solid var(--border);
+}
+.chat-msg-own {
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--ice-dim), var(--ice));
+  color: #000;
+}
+.chat-msg-own.chat-msg-staff {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+}
+.chat-msg-other.chat-msg-staff {
+  border-color: var(--gold-dim);
+  background: var(--gold-bg);
+}
+.chat-msg-head {
+  display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+  margin-bottom: 3px;
+}
+.chat-msg-name { font-size: 11px; font-weight: 600; opacity: 0.85; }
+.chat-msg-own .chat-msg-name { color: rgba(0,0,0,0.7); }
+.chat-msg-time { font-size: 10px; opacity: 0.6; font-family: var(--font-mono); }
+.chat-msg-text { line-height: 1.4; }
+.chat-staff-tag {
+  display: inline-block; font-size: 8px; padding: 1px 4px;
+  background: var(--gold); color: #000; border-radius: 3px;
+  letter-spacing: 1px; margin-left: 3px;
+}
+.chat-msg-own .chat-staff-tag { background: rgba(0,0,0,0.4); color: #fff; }
+
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row .seal-input { flex: 1; font-family: var(--font-ui); font-size: 14px; }
+
+/* Chat badge on tab */
+.chat-badge {
+  display: inline-block; background: var(--red); color: #fff;
+  font-size: 10px; font-weight: bold; padding: 2px 6px;
+  border-radius: 10px; margin-left: 4px; min-width: 18px; text-align: center;
+  box-shadow: 0 0 8px rgba(255,51,85,0.5);
+  animation: badgePulse 2s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ============================================================
+   NEW: Modal extension log
+   ============================================================ */
+.modal-ext-log {
+  margin-top: 14px; padding: 10px 12px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.modal-ext-title {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-muted); letter-spacing: 1.5px; margin-bottom: 6px;
+}
+.modal-ext-row {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--text-dim); padding: 3px 0;
+}
+.modal-ext-row .pos { color: var(--green); font-weight: bold; }
+.modal-ext-row .neg { color: var(--red); font-weight: bold; }
+
+/* ============================================================
+   MOBILE adjustments for new tabs
+   ============================================================ */
+@media (max-width: 480px) {
+  .history-controls { width: 100%; flex-direction: column; gap: 6px; }
+  .history-controls .extra-input { width: 100%; }
+  .history-row { padding: 8px 12px; gap: 8px; }
+  .h-icon { font-size: 16px; width: 22px; }
+
+  #chatUI { height: calc(100vh - 240px); min-height: 320px; }
+  .chat-header { padding: 10px 12px; }
+  .chat-msg { max-width: 85%; font-size: 13px; }
+
+  .chat-badge { font-size: 9px; padding: 1px 5px; }
+}
