@@ -18,14 +18,15 @@ const STAFF_PASSWORD = 'Zamboni2000';
 // === FIREBASE CONFIG ===
 // Replace this with your config from the Firebase console.
 // See README for setup steps.
+
 const FIREBASE_CONFIG = {
-  apiKey:        "YOUR_API_KEY_HERE",
-  authDomain:    "YOUR_PROJECT.firebaseapp.com",
-  databaseURL:   "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId:     "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "000000000000",
-  appId:         "1:000000000000:web:abcdef"
+  apiKey: "AIzaSyBb5WYG3SdLLyv4AJya1TZWkLgpWYN4cwg",
+  authDomain: "miami-ice-seal-chat.firebaseapp.com",
+  databaseURL: "https://miami-ice-seal-chat-default-rtdb.firebaseio.com",
+  projectId: "miami-ice-seal-chat",
+  storageBucket: "miami-ice-seal-chat.firebasestorage.app",
+  messagingSenderId: "487351336770",
+  appId: "1:487351336770:web:a95facd25180dd7c8312db"
 };
 
 // Seal lists
