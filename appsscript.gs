@@ -205,9 +205,31 @@ function updateCurrentTime() {
 
 function clearHistoryDaily() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 1) Clear the HISTORY tab (existing behavior)
   const historySheet = ss.getSheetByName("HISTORY");
   if (historySheet) {
     historySheet.getRange("A2:E").clearContent();
+  }
+
+  // 2) Clear active seals on the DATA tab — keep seal IDs, wipe everything else
+  const dataSheet = ss.getSheetByName("DATA");
+  if (dataSheet) {
+    const lastRow = dataSheet.getLastRow();
+    if (lastRow > 1) {
+      // Clear status (B), start (C), expiration (D), additional time (E), notes (F)
+      dataSheet.getRange(2, 2, lastRow - 1, 5).clearContent();
+    }
+  }
+
+  // 3) Clear Party Seals tab — keep seal IDs, wipe everything else
+  const partySheet = ss.getSheetByName("Party Seals");
+  if (partySheet) {
+    const lastRow = partySheet.getLastRow();
+    if (lastRow > 1) {
+      // Clear status (B), start (C), expiration (D), additional time (E), room (F)
+      partySheet.getRange(2, 2, lastRow - 1, 5).clearContent();
+    }
   }
 }
 
