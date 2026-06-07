@@ -145,10 +145,23 @@ function onEdit(e) {
 
     const extraMinutes = Number(extraCell.getValue()) || 0;
 
-    function fivePM() {
-      const d = new Date();
-      d.setHours(17, 0, 0, 0);
-      return d;
+    // Party windows: morning ends at 12pm, afternoon ends at 5pm, evening ends at 11:30pm
+    function partyWindowEnd() {
+      const now = new Date();
+      const windows = [
+        { h: 12, m: 0 },
+        { h: 17, m: 0 },
+        { h: 23, m: 30 }
+      ];
+      for (const w of windows) {
+        const candidate = new Date(now);
+        candidate.setHours(w.h, w.m, 0, 0);
+        if (candidate.getTime() > now.getTime()) return candidate;
+      }
+      // No window left today — fall back to 11:30 PM today (it's overdue immediately)
+      const fallback = new Date(now);
+      fallback.setHours(23, 30, 0, 0);
+      return fallback;
     }
 
     // --- Party Room entered ---
@@ -157,7 +170,7 @@ function onEdit(e) {
       startCell.setValue(startTime);
       statusCell.setValue("Rented");
 
-      const expirationTime = new Date(fivePM().getTime() + extraMinutes * 60000);
+      const expirationTime = new Date(partyWindowEnd().getTime() + extraMinutes * 60000);
       expirationCell.setValue(expirationTime);
 
       startCell.setNumberFormat("h:mm AM/PM");
@@ -166,7 +179,7 @@ function onEdit(e) {
 
     // --- Additional Time edited ---
     if (col === extraCol && statusCell.getValue() === "Rented") {
-      const expirationTime = new Date(fivePM().getTime() + extraMinutes * 60000);
+      const expirationTime = new Date(partyWindowEnd().getTime() + extraMinutes * 60000);
       expirationCell.setValue(expirationTime);
     }
 
@@ -431,7 +444,28 @@ function webExtendSeal(params) {
 //  ACTIVATE PARTY SEAL
 //  Writes room to column F — same trigger point as manual entry.
 //  Then explicitly sets start, status, expiry to match onEdit behavior.
+//  Expiry is calculated based on which party window we're in:
+//    - before 12 PM → expires 12 PM
+//    - 12 PM to 5 PM → expires 5 PM
+//    - 5 PM to 11:30 PM → expires 11:30 PM
 // ============================================================
+function _partyWindowEnd() {
+  const now = new Date();
+  const windows = [
+    { h: 12, m: 0 },
+    { h: 17, m: 0 },
+    { h: 23, m: 30 }
+  ];
+  for (const w of windows) {
+    const candidate = new Date(now);
+    candidate.setHours(w.h, w.m, 0, 0);
+    if (candidate.getTime() > now.getTime()) return candidate;
+  }
+  const fallback = new Date(now);
+  fallback.setHours(23, 30, 0, 0);
+  return fallback;
+}
+
 function webActivatePartySeal(params) {
   const sealId = params.sealId;
   const room   = params.room || '';
@@ -448,8 +482,7 @@ function webActivatePartySeal(params) {
   }
 
   const now    = new Date();
-  const expiry = new Date();
-  expiry.setHours(17, 0, 0, 0); // 5:00 PM
+  const expiry = _partyWindowEnd();
 
   sheet.getRange(row, PARTY_COL.STATUS).setValue('Rented');
   sheet.getRange(row, PARTY_COL.START).setValue(now);
