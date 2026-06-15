@@ -1,6 +1,6 @@
 // ============================================================
-//  SEAL TRACKER — app.js  |  MIAMI ICE ARENA
-//  Multi-arena architecture: this file is for /miami only
+//  SEAL TRACKER — app.js  |  PINES ICE ARENA
+//  Multi-arena architecture: this file is for /pines only
 // ============================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -15,9 +15,9 @@ import {
 const ARENA_ID    = 'pines';
 const ARENA_NAME  = 'Pines Ice Arena';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/pinesice.com/s/AKfycbwgON2Y_ARWp9kdyVzFTuRMAhIHuvmgO1OoVcqUidKQXMVd3dgLb5bL1VlR0VA4KJ8P/exec';
+const APPS_SCRIPT_URL = 'YOUR_PINES_APPS_SCRIPT_URL_HERE';
 
-const STAFF_PASSWORD = 'pin3sic3';
+const STAFF_PASSWORD = 'CHANGEME_pines_password';
 
 // Shared Firebase project for both arenas, but namespaced paths
 const FIREBASE_CONFIG = {
