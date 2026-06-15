@@ -1,138 +1,227 @@
-# 🐟 StalkBobby Setup Guide
-## Multi-arena seal tracker
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Miami Ice Arena — Seal Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body>
 
-This is the deployment guide for `stalkbobby.com` serving multiple arenas.
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <a href="../" class="logo-link" title="Switch arenas">
+          <img id="bobbyLogo" class="logo-bobby" alt="Bobby the Seal" />
+        </a>
+        <div class="logo-text">
+          <span class="logo-title">MIAMI ICE</span>
+          <span class="logo-sub">Seal Tracker</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="active-count-badge">
+          <span id="activeCount">0</span>
+          <span>ACTIVE</span>
+        </div>
+        <div class="header-controls">
+          <button class="btn-theme" id="themeToggle" title="Toggle light/dark mode">☀️</button>
+          <button class="btn-lock" id="lockBtn" style="display:none" title="Lock staff access">🔒 LOCK</button>
+        </div>
+      </div>
+    </div>
+  </header>
 
----
+  <!-- Tabs -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="staff">⬡ STAFF</button>
+    <button class="tab-btn" data-tab="skateguard">🛡 SKATEGUARD</button>
+    <button class="tab-btn" data-tab="party">🎉 PARTY</button>
+    <button class="tab-btn" data-tab="history">📜 HISTORY</button>
+    <button class="tab-btn" data-tab="chat">💬 CHAT <span class="chat-badge" id="chatBadge" style="display:none">0</span></button>
+  </nav>
 
-## 📁 Folder structure
+  <!-- ===================== STAFF TAB ===================== -->
+  <section class="tab-content active" id="tab-staff">
+    <div class="lock-screen" id="staffLockScreen">
+      <div class="lock-card">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">STAFF ACCESS ONLY</div>
+        <div class="lock-sub">Enter the staff password to activate or manage seals.</div>
+        <input type="password" id="authPasswordInput" class="lock-input" placeholder="Enter password..." autocomplete="off" />
+        <div class="lock-error" id="authError"></div>
+        <button class="btn-activate lock-submit" id="authSubmitBtn">UNLOCK</button>
+      </div>
+    </div>
 
-```
-stalkbobby.com (your GitHub repo)
-├── index.html              ← Landing page (arena picker)
-├── style.css               ← Shared styles
-├── README.md, etc.         ← Optional docs
-├── miami/
-│   ├── index.html          ← Miami app shell
-│   └── app.js              ← Miami config + logic
-└── pines/
-    ├── index.html          ← Pines app shell
-    └── app.js              ← Pines config + logic
-```
+    <div id="staffUI" style="display:none">
+      <div class="search-section">
+        <div class="search-label">ACTIVATE / RETURN SEAL</div>
+        <div class="search-row">
+          <input type="text" id="sealSearch" class="seal-input" placeholder="Type seal ID (e.g. 57, X, Star)..." autocomplete="off" autocorrect="off" spellcheck="false" />
+          <button class="btn-activate" id="activateBtn">ACTIVATE</button>
+        </div>
+        <div class="search-extras">
+          <input type="number" id="additionalTime" class="extra-input" placeholder="Extra mins (optional)" />
+          <input type="text" id="sealNotes" class="extra-input" placeholder="Notes (optional)" />
+        </div>
+        <div class="search-feedback" id="searchFeedback"></div>
+      </div>
 
-When the user visits:
-- `stalkbobby.com/` → arena picker
-- `stalkbobby.com/miami/` → Miami app
-- `stalkbobby.com/pines/` → Pines app
+      <div class="grid-section">
+        <div class="section-header">
+          <span class="section-title">ALL SEALS</span>
+          <div class="legend">
+            <span class="legend-dot available"></span><span>Available</span>
+            <span class="legend-dot active-leg"></span><span>Active</span>
+            <span class="legend-dot party"></span><span>Party</span>
+            <span class="legend-dot expired"></span><span>Expired</span>
+          </div>
+        </div>
+        <div class="seal-grid" id="sealGrid"></div>
+      </div>
 
----
+      <div class="status-bar">
+        <span id="lastUpdated">Last synced: —</span>
+        <button class="btn-refresh small" id="staffRefresh">↻ SYNC</button>
+      </div>
+    </div>
+  </section>
 
-## ⚙️ Setup Checklist
+  <!-- ===================== SKATEGUARD TAB ===================== -->
+  <section class="tab-content" id="tab-skateguard">
+    <div class="skateguard-header">
+      <div class="section-title">ACTIVE SEALS — DUE SOONEST FIRST</div>
+      <button class="btn-refresh" id="skateguardRefresh">↻ REFRESH</button>
+    </div>
+    <div class="skateguard-list" id="skateguardList"></div>
+    <div class="status-bar">
+      <span id="skateguardUpdated">Last updated: —</span>
+    </div>
+  </section>
 
-### 1. Push files to GitHub
-Upload everything to your repo, keeping the folder structure exactly as shown above.
+  <!-- ===================== PARTY TAB ===================== -->
+  <section class="tab-content" id="tab-party">
+    <div class="lock-screen" id="partyLockScreen">
+      <div class="lock-card">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">STAFF ACCESS ONLY</div>
+        <div class="lock-sub">Enter the staff password on the Staff tab to unlock party seal management.</div>
+        <button class="btn-activate lock-submit" onclick="switchToStaffTab()">GO TO STAFF LOGIN</button>
+      </div>
+    </div>
 
-### 2. Update Firebase rules (one time)
-The rules need to allow per-arena namespaces. Replace your Firebase rules with this:
+    <div id="partyUI" style="display:none">
+      <div class="search-section">
+        <div class="search-label">ACTIVATE PARTY SEAL</div>
+        <div class="search-row">
+          <input type="text" id="partySealId" class="seal-input" placeholder="Seal ID (e.g. 37)" autocomplete="off" spellcheck="false" />
+          <input type="text" id="partyRoom" class="seal-input small" placeholder="Room" autocomplete="off" spellcheck="false" />
+          <button class="btn-activate" id="partyActivateBtn">ACTIVATE</button>
+        </div>
+        <div class="search-feedback" id="partyFeedback"></div>
+      </div>
 
-```json
-{
-  "rules": {
-    "$arena": {
-      "messages": {
-        ".read": true,
-        ".write": true,
-        "$msgId": {
-          ".validate": "newData.hasChildren(['name', 'text', 'timestamp']) && newData.child('text').isString() && newData.child('text').val().length < 500"
-        }
-      },
-      "seals":   { ".read": true, ".write": true },
-      "rentals": { ".read": true, ".write": true },
-      "meta":    { ".read": true, ".write": true }
+      <div class="grid-section">
+        <div class="section-header">
+          <span class="section-title">ACTIVE PARTY SEALS</span>
+          <span class="party-note">Expires at end of current party window</span>
+        </div>
+        <div class="party-list" id="partyList"></div>
+      </div>
+
+      <div class="status-bar">
+        <span id="partyUpdated">Last updated: —</span>
+        <button class="btn-refresh small" id="partyRefresh">↻ SYNC</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HISTORY TAB ===================== -->
+  <section class="tab-content" id="tab-history">
+    <div class="history-header">
+      <div class="section-title">TODAY'S HISTORY — RESETS AT MIDNIGHT</div>
+      <div class="history-controls">
+        <input type="text" id="historyFilter" class="extra-input" placeholder="Filter by seal ID..." />
+        <button class="btn-refresh" id="historyRefresh">↻ REFRESH</button>
+      </div>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">Loading...</div>
+    </div>
+    <div class="status-bar">
+      <span id="historyUpdated">Last updated: —</span>
+    </div>
+  </section>
+
+  <!-- ===================== CHAT TAB ===================== -->
+  <section class="tab-content" id="tab-chat">
+    <!-- Identity prompt (shown until user picks a name) -->
+    <div class="lock-screen" id="chatIdentityScreen" style="display:none">
+      <div class="lock-card">
+        <div class="lock-icon">💬</div>
+        <div class="lock-title">WHO ARE YOU?</div>
+        <div class="lock-sub">Pick your name so others know who you are.</div>
+        <input type="text" id="chatNameInput" class="lock-input" placeholder="Your name..." autocomplete="off" maxlength="20" />
+        <button class="btn-activate lock-submit" id="chatNameSubmit">START CHATTING</button>
+      </div>
+    </div>
+
+    <!-- Chat UI -->
+    <div id="chatUI" style="display:none">
+      <div class="chat-header">
+        <div>
+          <div class="section-title">LIVE CHAT</div>
+          <div class="chat-name-label">Chatting as <strong id="chatNameDisplay">—</strong> <button class="chat-name-change" id="changeChatName">change</button></div>
+        </div>
+        <div class="chat-status">
+          <span class="chat-status-dot" id="chatStatusDot"></span>
+          <span id="chatStatusText">Connecting...</span>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty">No messages yet — say hi 👋</div>
+      </div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" class="seal-input" placeholder="Type a message..." autocomplete="off" maxlength="500" />
+        <button class="btn-activate" id="chatSendBtn">SEND</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-title" id="modalTitle">SEAL ACTION</div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Notification ping audio (data URL = no external file) -->
+  <audio id="pingSound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==" type="audio/wav">
+  </audio>
+
+  <script>
+    function switchToStaffTab() {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+      document.querySelector('[data-tab="staff"]').classList.add('active');
+      document.getElementById('tab-staff').classList.add('active');
     }
-  }
-}
-```
+  </script>
 
-**Important:** This wipes your existing chat/seals data once. If you have anything from yesterday you want to keep, screenshot it first. Going forward, Miami data lives at `/miami/...` and Pines data lives at `/pines/...` — they will never mix.
-
-### 3. Create the Pines Google Sheet
-Make a copy of your Miami sheet (so it has all the same tabs: DATA, Party Seals, HISTORY).
-- Update the Seal IDs in column A to match Pines's actual seals
-- Open Extensions → Apps Script
-- Paste in the SAME Apps Script code as Miami
-- Deploy → New deployment → Web app → Execute as Me, Anyone access
-- Copy the new Web App URL
-
-### 4. Update Pines `app.js`
-Open `pines/app.js` and update these three lines near the top:
-
-```js
-const APPS_SCRIPT_URL = 'PASTE_PINES_WEBAPP_URL_HERE';
-const STAFF_PASSWORD  = 'YOUR_PINES_PASSWORD_HERE';
-```
-
-Also update the seal lists below to match Pines's actual seals:
-```js
-const REGULAR_SEALS  = [ ...your Pines regular seals... ];
-const PARTY_GRID_SEALS = [ ...your Pines party seals... ];
-```
-
-(I'll send you those lists once you give me the seal info.)
-
-### 5. Enable GitHub Pages
-- In your repo: Settings → Pages
-- Source: Deploy from a branch → `main` (or `master`) → `/ (root)`
-- Save. GitHub will give you a URL like `username.github.io/repo-name`
-
-### 6. Set up the custom domain `stalkbobby.com`
-**Buy the domain** (~$10-12/year) from any registrar:
-- **Cloudflare Registrar** (cheapest, at-cost pricing): https://www.cloudflare.com/products/registrar/
-- **Namecheap**: https://www.namecheap.com/
-- **Porkbun**: also good
-
-**Point it at GitHub Pages:**
-1. In your GitHub repo settings → Pages → "Custom domain", enter `stalkbobby.com`, click Save
-2. At your domain registrar, add these DNS records:
-
-| Type | Name | Value |
-|------|------|-------|
-| A    | @    | 185.199.108.153 |
-| A    | @    | 185.199.109.153 |
-| A    | @    | 185.199.110.153 |
-| A    | @    | 185.199.111.153 |
-| CNAME | www | `yourusername.github.io` |
-
-3. Back in GitHub Pages settings, check **"Enforce HTTPS"** once the cert is issued (takes 5-60 minutes)
-
-Done — `stalkbobby.com` will load your landing page, `stalkbobby.com/miami/` and `stalkbobby.com/pines/` will load each arena.
-
----
-
-## 🔑 Notes on isolation
-
-Each arena is completely isolated:
-- ✅ Different Google Sheets (different data, different Apps Script URLs)
-- ✅ Different staff passwords
-- ✅ Different chat threads (Miami staff don't see Pines chat and vice versa)
-- ✅ Different seal lists
-- ✅ Different login sessions (logging into Miami doesn't log you into Pines)
-- ✅ Different histories
-- ✅ Independent midnight resets
-
-They share:
-- 📦 The same Firebase project (just different paths inside it — cheaper than two projects)
-- 📦 The same CSS file (so any visual update applies to both)
-- 📦 The same Bobby logo
-
----
-
-## 🪴 To add a third arena later
-
-1. Copy the `miami/` folder → rename to e.g. `kendall/`
-2. In the new `app.js`, change `ARENA_ID` to `'kendall'` and update the other config values
-3. Add a new card to the landing page `index.html`
-4. Create a third Google Sheet + Apps Script deployment
-5. Update the Firebase rules — they already use `$arena` as a wildcard, so any new arena ID is auto-allowed
-
-That's it.
+  <!-- Firebase SDK (modular, loaded as ES modules) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
