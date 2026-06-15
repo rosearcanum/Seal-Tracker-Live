@@ -484,15 +484,15 @@ body.light-mode header { background: linear-gradient(135deg, #0a3d6b 0%, #1565a8
    NEW: Party seal grid style (orange instead of blue)
    ============================================================ */
 .seal-tile.party-type {
-  background: rgba(255,140,0,0.06);
-  border-color: rgba(255,140,0,0.3);
+  background: rgba(255,140,0,0.10);
+  border-color: rgba(255,140,0,0.5);
 }
 .seal-tile.party-type.state-available .tile-id { color: var(--orange); }
-.seal-tile.party-type.state-available:hover { background: rgba(255,140,0,0.12); border-color: var(--orange); }
+.seal-tile.party-type.state-available:hover { background: rgba(255,140,0,0.18); border-color: var(--orange); }
 
 .seal-tile.state-party-active {
-  border-color: var(--orange); background: var(--orange-bg);
-  box-shadow: 0 0 8px rgba(255,140,0,0.18);
+  border-color: var(--orange); background: rgba(255,140,0,0.18);
+  box-shadow: 0 0 12px rgba(255,140,0,0.3);
 }
 .seal-tile.state-party-active .tile-id { color: var(--orange); text-shadow: 0 0 8px rgba(255,140,0,0.4); }
 
