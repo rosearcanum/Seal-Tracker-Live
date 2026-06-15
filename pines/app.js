@@ -15,9 +15,9 @@ import {
 const ARENA_ID    = 'pines';
 const ARENA_NAME  = 'Pines Ice Arena';
 
-const APPS_SCRIPT_URL = 'YOUR_PINES_APPS_SCRIPT_URL_HERE';
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/pinesice.com/s/AKfycbwgON2Y_ARWp9kdyVzFTuRMAhIHuvmgO1OoVcqUidKQXMVd3dgLb5bL1VlR0VA4KJ8P/exec';
 
-const STAFF_PASSWORD = 'CHANGEME_pines_password';
+const STAFF_PASSWORD = 'pin3sic3';
 
 // Shared Firebase project for both arenas, but namespaced paths
 const FIREBASE_CONFIG = {
