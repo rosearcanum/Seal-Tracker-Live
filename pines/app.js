@@ -15,7 +15,7 @@ import {
 const ARENA_ID    = 'pines';
 const ARENA_NAME  = 'Pines Ice Arena';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/pinesice.com/s/AKfycbzXpD-5VrYTlUMhMrx08iPIr30EGDEMZnZM_UoT6bkHPpqfrNgK5ltDa_KFzR_CKUU3/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXpD-5VrYTlUMhMrx08iPIr30EGDEMZnZM_UoT6bkHPpqfrNgK5ltDa_KFzR_CKUU3/exec';
 
 const STAFF_PASSWORD = 'pin3sic3';
 
