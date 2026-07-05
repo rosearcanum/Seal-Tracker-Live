@@ -15,9 +15,9 @@ import {
 const ARENA_ID    = 'pines';
 const ARENA_NAME  = 'Pines Ice Arena';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXpD-5VrYTlUMhMrx08iPIr30EGDEMZnZM_UoT6bkHPpqfrNgK5ltDa_KFzR_CKUU3/exec';
+const APPS_SCRIPT_URL = 'YOUR_PINES_APPS_SCRIPT_URL_HERE';
 
-const STAFF_PASSWORD = 'pin3sic3';
+const STAFF_PASSWORD = 'CHANGEME_pines_password';
 
 // Shared Firebase project for both arenas, but namespaced paths
 const FIREBASE_CONFIG = {
@@ -744,18 +744,20 @@ function updateGrid() {
 
     if (d?.status === 'Active') {
       const mins = computeMinsRemaining(d);
+      // For Pines: display the actual expiration time (e.g. "4:35 PM") instead of minutes remaining
+      const timeText = d.expiration || `${Math.round(mins)}m`;
       if (mins <= 0) {
         tile.classList.add('state-expired');
-        timeEl.textContent = `${Math.abs(Math.round(mins))}m OVR`;
+        timeEl.textContent = 'OVR ' + timeText;
       } else if (mins <= 10) {
         tile.classList.add('state-warning');
-        timeEl.textContent = `${Math.round(mins)}m`;
+        timeEl.textContent = timeText;
       } else if (isPartyType) {
         tile.classList.add('state-party-active');
-        timeEl.textContent = `${Math.round(mins)}m`;
+        timeEl.textContent = timeText;
       } else {
         tile.classList.add('state-active');
-        timeEl.textContent = `${Math.round(mins)}m`;
+        timeEl.textContent = timeText;
       }
     } else {
       tile.classList.add('state-available');
