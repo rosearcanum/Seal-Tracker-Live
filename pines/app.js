@@ -17,7 +17,7 @@ const ARENA_NAME  = 'Pines Ice Arena';
 
 const APPS_SCRIPT_URL = 'YOUR_PINES_APPS_SCRIPT_URL_HERE';
 
-const STAFF_PASSWORD = 'CHANGEME_pines_password';
+const STAFF_PASSWORD = 'pin3sic3';
 
 // Shared Firebase project for both arenas, but namespaced paths
 const FIREBASE_CONFIG = {
