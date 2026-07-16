@@ -744,8 +744,16 @@ function updateGrid() {
 
     if (d?.status === 'Active') {
       const mins = computeMinsRemaining(d);
-      // For Pines: display the actual expiration time (e.g. "4:35 PM") instead of minutes remaining
-      const timeText = d.expiration || `${Math.round(mins)}m`;
+      // For Pines: display the actual expiration time (e.g. "4:35 PM") instead of minutes remaining.
+      // Compute directly from expirationTimestamp so it works even if the display field is missing.
+      let timeText = '—';
+      if (d.expirationTimestamp) {
+        timeText = new Date(d.expirationTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      } else if (d.expiration) {
+        timeText = d.expiration;
+      } else {
+        timeText = `${Math.round(mins)}m`;
+      }
       if (mins <= 0) {
         tile.classList.add('state-expired');
         timeEl.textContent = 'OVR ' + timeText;
