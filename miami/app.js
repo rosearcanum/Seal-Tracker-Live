@@ -28,7 +28,7 @@ const REGULAR_SEALS = [
   '31','32','33','34','35','36',
   '57','58','59','60',
   'A','B','C','D','E','I','J','K','L','M','N','O','P','Q','S','T','U','V','X','Y','Z',
-  'Star','Octagon','Triangle','$','Sun'
+  'Star','Octagon','Triangle','Dollar Sign','Sun'
 ];
 const PARTY_GRID_SEALS = [];
 for (let i = 37; i <= 56; i++) PARTY_GRID_SEALS.push(String(i));
