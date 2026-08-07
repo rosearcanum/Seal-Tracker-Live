@@ -75,6 +75,27 @@
       min-height: 20px; margin-top: 10px;
     }
 
+    /* Language toggle button */
+    .lang-toggle {
+      position: absolute; top: 20px; right: 20px;
+      display: flex; gap: 4px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 3px;
+      z-index: 20;
+    }
+    .lang-btn {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; padding: 5px 9px;
+      color: var(--text-muted); background: transparent; border: none;
+      border-radius: 4px; cursor: pointer;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .lang-btn:hover { color: var(--text); }
+    .lang-btn.active {
+      color: var(--bg); background: var(--ice);
+    }
+
     /* Status screen */
     .status-label {
       font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
@@ -170,67 +191,73 @@
   </style>
 </head>
 <body>
+  <div class="lang-toggle">
+    <button class="lang-btn active" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="es">ES</button>
+  </div>
+
   <div class="customer-wrap">
     <div class="header">
       <img class="header-logo" id="arenaLogo" alt="Pines Ice Arena" />
       <div class="header-text">
         <div class="header-title">PINES ICE ARENA</div>
-        <div class="header-sub">SEAL TRACKER</div>
+        <div class="header-sub" data-i18n="tracker">SEAL TRACKER</div>
       </div>
     </div>
 
     <!-- Lookup Screen -->
     <div class="lookup-card" id="lookupCard">
-      <div class="lookup-label">CHECK MY SEAL</div>
-      <div class="lookup-prompt">Enter your seal number to see when it's due back.</div>
+      <div class="lookup-label" data-i18n="checkMySeal">CHECK MY SEAL</div>
+      <div class="lookup-prompt" data-i18n="prompt">Enter your seal number to see when it's due back.</div>
       <input
         type="text"
         id="sealInput"
         class="lookup-input"
         placeholder="Seal #"
+        data-i18n-placeholder="sealPlaceholder"
         autocomplete="off"
         autocorrect="off"
         spellcheck="false"
         inputmode="text"
       />
-      <button class="lookup-btn" id="lookupBtn">CHECK</button>
+      <button class="lookup-btn" id="lookupBtn" data-i18n="check">CHECK</button>
       <div class="lookup-error" id="lookupError"></div>
     </div>
 
     <!-- Status Screen (hidden initially) -->
     <div class="status-card" id="statusCard" style="display:none">
-      <div class="status-label">YOUR SEAL</div>
+      <div class="status-label" data-i18n="yourSeal">YOUR SEAL</div>
       <div class="seal-number" id="statusSealId">—</div>
       <div id="statusTagWrap"></div>
 
       <div id="statusActive" style="display:none">
         <div class="big-time" id="statusBigTime">—</div>
-        <div class="time-caption" id="statusTimeCaption">REMAINING</div>
+        <div class="time-caption" id="statusTimeCaption" data-i18n="remaining">REMAINING</div>
 
         <div class="due-row">
-          <span class="due-row-label">DUE BACK</span>
+          <span class="due-row-label" data-i18n="dueBack">DUE BACK</span>
           <span class="due-row-value" id="statusDueBack">—</span>
         </div>
 
-        <div class="return-info">
+        <div class="return-info" data-i18n-html="returnMsg">
           Please return your seal to the <strong>front counter</strong> before your time is up.
         </div>
       </div>
 
       <div id="statusInactive" style="display:none">
         <div class="big-time dim">—</div>
-        <div class="time-caption">NOT CURRENTLY RENTED</div>
-        <div class="return-info" style="margin-top: 12px;">
+        <div class="time-caption" data-i18n="notRented">NOT CURRENTLY RENTED</div>
+        <div class="return-info" style="margin-top: 12px;" data-i18n="notRentedMsg">
           This seal isn't checked out right now. Please double-check your seal number, or visit the front counter for help.
         </div>
       </div>
 
-      <button class="refresh-btn" id="refreshBtn">↻ REFRESH</button>
+      <button class="refresh-btn" id="refreshBtn" data-i18n="refresh">↻ REFRESH</button>
     </div>
 
     <div class="footer-links">
-      <a href="#" id="changeSealBtn">Different seal</a>
-      <a href="../">Back</a>
+      <a href="#" id="changeSealBtn" data-i18n="differentSeal">Different seal</a>
+      <a href="../" data-i18n="back">Back</a>
     </div>
   </div>
 
