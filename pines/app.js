@@ -993,18 +993,26 @@ function updateGrid() {
 
     if (d?.status === 'Active') {
       const mins = computeMinsRemaining(d);
+      let timeText = '—';
+      if (d.expirationTimestamp) {
+        timeText = new Date(d.expirationTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      } else if (d.expiration) {
+        timeText = d.expiration;
+      } else {
+        timeText = `${Math.round(mins)}m`;
+      }
       if (mins <= 0) {
         tile.classList.add('state-expired');
-        timeEl.textContent = `${Math.abs(Math.round(mins))}m OVR`;
+        timeEl.textContent = 'OVR ' + timeText;
       } else if (mins <= 10) {
         tile.classList.add('state-warning');
-        timeEl.textContent = `${Math.round(mins)}m`;
+        timeEl.textContent = timeText;
       } else if (isPartyType) {
         tile.classList.add('state-party-active');
-        timeEl.textContent = `${Math.round(mins)}m`;
+        timeEl.textContent = timeText;
       } else {
         tile.classList.add('state-active');
-        timeEl.textContent = `${Math.round(mins)}m`;
+        timeEl.textContent = timeText;
       }
     } else {
       tile.classList.add('state-available');
