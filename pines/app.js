@@ -15,7 +15,7 @@ import {
 const ARENA_ID    = 'pines';
 const ARENA_NAME  = 'Pines Ice Arena';
 
-const APPS_SCRIPT_URL = 'YOUR_PINES_APPS_SCRIPT_URL_HERE';
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/pinesice.com/s/AKfycbzXpD-5VrYTlUMhMrx08iPIr30EGDEMZnZM_UoT6bkHPpqfrNgK5ltDa_KFzR_CKUU3/exec';
 
 const STAFF_PASSWORD = 'pin3sic3';
 
@@ -37,7 +37,7 @@ const PARTY_SHEET_NAME = 'DATA';
 
 // Master seal list — Pines Ice Arena
 // Regular seals: 1–64
-// Party seals: 65–84 (hidden from grid until rented)
+// Party seals: 65–84 (hidden from grid until rented) — display values. PARTY_SEALS are hidden from grid until rented.
 const REGULAR_SEALS = [];
 for (let i = 1; i <= 64; i++) REGULAR_SEALS.push(String(i));
 
@@ -102,6 +102,8 @@ let chatTabIsActive  = false;
 let firebaseReady    = false;
 let chatDb           = null;
 let lastFirebaseUpdate = 0; // throttle UI repaints
+let undoStack        = []; // last 5 reversible actions
+let partyRoomFilter  = null; // null = show all rooms, otherwise a specific room string
 
 // ============================================================
 //  STORAGE HELPERS — daily persistence
@@ -166,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupHistory();
   setupChat();
   setupModal();
+  setupUndo();
 
   buildGrid();
 
@@ -484,6 +487,103 @@ function findActiveRentalId(canonicalId) {
 }
 
 // ============================================================
+//  UNDO — track last 5 reversible actions
+// ============================================================
+const UNDO_MAX = 5;
+
+function pushUndo(action) {
+  undoStack.push(action);
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  renderUndoButton();
+}
+
+function renderUndoButton() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  if (undoStack.length === 0) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = 'inline-flex';
+    const last = undoStack[undoStack.length - 1];
+    let label = 'UNDO';
+    if (last.type === 'return')   label = `↶ UNDO RETURN ${last.sealId}`;
+    if (last.type === 'activate') label = `↶ UNDO ACTIVATE ${last.sealId}`;
+    if (last.type === 'extend')   label = `↶ UNDO ${last.mins > 0 ? '+' : ''}${last.mins}m ON ${last.sealId}`;
+    btn.textContent = label;
+  }
+}
+
+async function performUndo() {
+  if (!isAuthenticated) { toast('🔒 Staff login required', 'error'); return; }
+  if (undoStack.length === 0) return;
+  const action = undoStack.pop();
+  renderUndoButton();
+
+  try {
+    if (action.type === 'return') {
+      sealData[action.sealId] = action.prevSeal;
+      updateAllViews();
+      await fbSetSeal(action.sealId, action.prevSeal);
+      if (action.rentalId) {
+        await fbLogRental({
+          id: action.rentalId,
+          returnedAt: null,
+          returnedAtDisplay: null
+        });
+      }
+      const isParty = action.prevSeal.isParty || isPartySeal(action.sealId);
+      apiCall({
+        action: 'activate',
+        sealId: action.sealId,
+        additionalTime: parseInt(action.prevSeal.additionalTime) || 0,
+        notes: action.prevSeal.notes || '',
+        sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
+      }).catch(err => console.warn('Sheets undo sync failed:', err.message));
+      toast(`Undo: seal ${action.sealId} restored`, 'success');
+    }
+    else if (action.type === 'activate') {
+      delete sealData[action.sealId];
+      updateAllViews();
+      await fbRemoveSeal(action.sealId);
+      if (action.rentalId) {
+        try { await fbLogRental({ id: action.rentalId, _undone: true }); } catch (e) {}
+      }
+      const isParty = isPartySeal(action.sealId);
+      apiCall({
+        action: isParty ? 'returnParty' : 'return',
+        sealId: action.sealId,
+        sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
+      }).catch(err => console.warn('Sheets undo sync failed:', err.message));
+      toast(`Undo: seal ${action.sealId} deactivated`, 'success');
+    }
+    else if (action.type === 'extend') {
+      sealData[action.sealId] = action.prevSeal;
+      updateAllViews();
+      await fbSetSeal(action.sealId, action.prevSeal);
+      if (action.rentalId) {
+        await fbLogRental({
+          id: action.rentalId,
+          extensions: action.prevExtensions,
+          currentDueAt: action.prevSeal.expirationTimestamp,
+          currentDueAtDisplay: action.prevSeal.expiration
+        });
+      }
+      if (!isPartySeal(action.sealId)) {
+        apiCall({
+          action: 'extend',
+          sealId: action.sealId,
+          additionalTime: -action.mins,
+          sheet: 'DATA'
+        }).catch(err => console.warn('Sheets undo sync failed:', err.message));
+      }
+      toast(`Undo: reverted ${action.mins > 0 ? '+' : ''}${action.mins}m on ${action.sealId}`, 'success');
+    }
+  } catch (err) {
+    toast(`Undo failed: ${err.message}`, 'error');
+  }
+}
+
+// ============================================================
 //  SEARCH + SMART ACTIVATE / RETURN
 // ============================================================
 function setupSearch() {
@@ -584,6 +684,12 @@ async function doActivate(canonId, addTime, notes) {
     document.getElementById('sealNotes').value = '';
     updateActionBtn(null);
     toast(`Seal ${canonId} activated`, 'success');
+
+    pushUndo({
+      type: 'activate',
+      sealId: canonId,
+      rentalId: findActiveRentalId(canonId)
+    });
   } catch (err) {
     setFeedback('searchFeedback', `Error: ${err.message}`, 'error');
     toast('Activation failed', 'error');
@@ -600,6 +706,10 @@ async function doReturn(canonId) {
     const isParty = sealData[canonId]?.isParty || isPartySeal(canonId);
     const now = new Date();
 
+    // Snapshot current seal so we can undo the return
+    const prevSeal = sealData[canonId] ? { ...sealData[canonId] } : null;
+    const rentalId = findActiveRentalId(canonId);
+
     // 1) Optimistic local update
     delete sealData[canonId];
     updateAllViews();
@@ -608,7 +718,6 @@ async function doReturn(canonId) {
     await fbRemoveSeal(canonId);
 
     // 3) Mark rental as returned in history
-    const rentalId = findActiveRentalId(canonId);
     if (rentalId) {
       await fbLogRental({
         id: rentalId,
@@ -625,6 +734,15 @@ async function doReturn(canonId) {
     document.getElementById('sealSearch').value = '';
     updateActionBtn(null);
     toast(`Seal ${canonId} returned ✓`, 'success');
+
+    if (prevSeal) {
+      pushUndo({
+        type: 'return',
+        sealId: canonId,
+        prevSeal,
+        rentalId
+      });
+    }
   } catch (err) {
     setFeedback('searchFeedback', `Error: ${err.message}`, 'error');
     toast('Return failed', 'error');
@@ -642,6 +760,11 @@ async function doExtend(canonId, mins) {
   const newAdd  = prevAdd + mins;
   const newExpiry = new Date(startTs + (75 + newAdd) * 60000);
 
+  const prevSeal = { ...seal };
+  const rentalId = findActiveRentalId(canonId);
+  const rec = rentalHistory.find(r => r.id === rentalId);
+  const prevExtensions = (rec?.extensions || []).slice();
+
   const updated = {
     ...seal,
     additionalTime: newAdd,
@@ -657,10 +780,8 @@ async function doExtend(canonId, mins) {
   await fbSetSeal(canonId, updated);
 
   // 3) Append extension to rental record
-  const rentalId = findActiveRentalId(canonId);
   if (rentalId) {
-    const rec = rentalHistory.find(r => r.id === rentalId);
-    const exts = (rec?.extensions || []).slice();
+    const exts = prevExtensions.slice();
     exts.push({
       mins,
       time: new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })
@@ -680,6 +801,15 @@ async function doExtend(canonId, mins) {
   }
 
   toast(`Seal ${canonId}: ${mins > 0 ? '+' : ''}${mins} min ✓`, 'success');
+
+  pushUndo({
+    type: 'extend',
+    sealId: canonId,
+    mins,
+    prevSeal,
+    prevExtensions,
+    rentalId
+  });
 }
 
 function highlightGridSeal(canonId) {
@@ -744,28 +874,18 @@ function updateGrid() {
 
     if (d?.status === 'Active') {
       const mins = computeMinsRemaining(d);
-      // For Pines: display the actual expiration time (e.g. "4:35 PM") instead of minutes remaining.
-      // Compute directly from expirationTimestamp so it works even if the display field is missing.
-      let timeText = '—';
-      if (d.expirationTimestamp) {
-        timeText = new Date(d.expirationTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      } else if (d.expiration) {
-        timeText = d.expiration;
-      } else {
-        timeText = `${Math.round(mins)}m`;
-      }
       if (mins <= 0) {
         tile.classList.add('state-expired');
-        timeEl.textContent = 'OVR ' + timeText;
+        timeEl.textContent = `${Math.abs(Math.round(mins))}m OVR`;
       } else if (mins <= 10) {
         tile.classList.add('state-warning');
-        timeEl.textContent = timeText;
+        timeEl.textContent = `${Math.round(mins)}m`;
       } else if (isPartyType) {
         tile.classList.add('state-party-active');
-        timeEl.textContent = timeText;
+        timeEl.textContent = `${Math.round(mins)}m`;
       } else {
         tile.classList.add('state-active');
-        timeEl.textContent = timeText;
+        timeEl.textContent = `${Math.round(mins)}m`;
       }
     } else {
       tile.classList.add('state-available');
@@ -937,27 +1057,72 @@ async function activatePartySeal() {
 
 function updatePartyView() {
   const list = document.getElementById('partyList');
-  const active = Object.entries(sealData)
+  const allActive = Object.entries(sealData)
     .filter(([, d]) => d.status === 'Active' && d.isParty);
-  if (active.length === 0) { list.innerHTML = `<div class="party-empty">No active party seals.</div>`; return; }
-  list.innerHTML = '';
-  active.forEach(([id, d]) => {
-    const mins = Math.round(computeMinsRemaining(d));
-    const row  = document.createElement('div');
-    row.className = 'party-row';
-    row.innerHTML = `
-      <div class="party-id">${id}</div>
-      <div class="party-room-badge">Room ${d.room || '?'}</div>
-      <div class="sg-info"><div class="sg-label">STARTED</div><div class="sg-value">${d.startTime || '—'}</div></div>
-      <div class="sg-info"><div class="sg-label">EXPIRES</div><div class="sg-value">${d.expiration || '—'}</div></div>
-      <div class="sg-info"><div class="sg-label">LEFT</div><div class="sg-value" style="color:var(--orange)">${mins <= 0 ? Math.abs(mins)+'m OVER' : mins+'m'}</div></div>
-      <button class="btn-return" onclick="window.sgReturn('${id}')">RETURN</button>
-    `;
-    list.appendChild(row);
+
+  const rooms = [...new Set(allActive.map(([, d]) => (d.room || '').toString().trim()).filter(r => r !== ''))].sort((a, b) => {
+    const na = parseInt(a), nb = parseInt(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b);
   });
+
+  if (partyRoomFilter && !rooms.includes(partyRoomFilter)) {
+    partyRoomFilter = null;
+  }
+
+  const filtered = partyRoomFilter
+    ? allActive.filter(([, d]) => (d.room || '').toString().trim() === partyRoomFilter)
+    : allActive;
+
+  let filterBar = '';
+  if (rooms.length > 0) {
+    filterBar = '<div class="party-room-filter">';
+    filterBar += `<button class="room-filter-btn ${partyRoomFilter === null ? 'active' : ''}" onclick="window.setPartyRoomFilter(null)">All (${allActive.length})</button>`;
+    rooms.forEach(r => {
+      const count = allActive.filter(([, d]) => (d.room || '').toString().trim() === r).length;
+      filterBar += `<button class="room-filter-btn ${partyRoomFilter === r ? 'active' : ''}" onclick="window.setPartyRoomFilter('${r.replace(/'/g, "\\'")}')">Room ${r} (${count})</button>`;
+    });
+    filterBar += '</div>';
+  }
+
+  if (allActive.length === 0) {
+    list.innerHTML = `<div class="party-empty">No active party seals.</div>`;
+    document.getElementById('partyUpdated').textContent =
+      `Last updated: ${new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}`;
+    return;
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = filterBar + `<div class="party-empty">No seals in Room ${partyRoomFilter}.</div>`;
+    document.getElementById('partyUpdated').textContent =
+      `Last updated: ${new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}`;
+    return;
+  }
+
+  let rowsHtml = filterBar;
+  filtered.forEach(([id, d]) => {
+    const mins = Math.round(computeMinsRemaining(d));
+    rowsHtml += `
+      <div class="party-row">
+        <div class="party-id">${id}</div>
+        <div class="party-room-badge">Room ${d.room || '?'}</div>
+        <div class="sg-info"><div class="sg-label">STARTED</div><div class="sg-value">${d.startTime || '—'}</div></div>
+        <div class="sg-info"><div class="sg-label">EXPIRES</div><div class="sg-value">${d.expiration || '—'}</div></div>
+        <div class="sg-info"><div class="sg-label">LEFT</div><div class="sg-value" style="color:var(--orange)">${mins <= 0 ? Math.abs(mins)+'m OVER' : mins+'m'}</div></div>
+        <button class="btn-return" onclick="window.sgReturn('${id}')">RETURN</button>
+      </div>
+    `;
+  });
+  list.innerHTML = rowsHtml;
+
   document.getElementById('partyUpdated').textContent =
     `Last updated: ${new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}`;
 }
+
+window.setPartyRoomFilter = function(room) {
+  partyRoomFilter = room;
+  updatePartyView();
+};
 
 // ============================================================
 //  MODAL
@@ -966,6 +1131,24 @@ function setupModal() {
   document.getElementById('modalOverlay').addEventListener('click', e => {
     if (e.target === document.getElementById('modalOverlay')) closeModal();
   });
+}
+
+function setupUndo() {
+  const btn = document.getElementById('undoBtn');
+  if (btn) btn.addEventListener('click', performUndo);
+
+  document.addEventListener('keydown', e => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isUndo = (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z');
+    if (!isUndo) return;
+    const target = e.target;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+    e.preventDefault();
+    performUndo();
+  });
+
+  renderUndoButton();
 }
 
 function showSealModal(id, d) {
@@ -1010,6 +1193,17 @@ function showSealModal(id, d) {
     <button class="btn-modal-cancel" onclick="window.closeModal()">Cancel</button>
   `;
   document.getElementById('modalOverlay').classList.add('open');
+
+  const extInput = document.getElementById('modalExtendMins');
+  if (extInput) {
+    extInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        window.extendFromModal(id);
+      }
+    });
+    setTimeout(() => extInput.focus(), 50);
+  }
 }
 
 window.openExtendModal = function(id) {
