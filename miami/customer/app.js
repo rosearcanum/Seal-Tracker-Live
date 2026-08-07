@@ -34,12 +34,101 @@ function canonicalSealId(input) {
   return SEAL_LOOKUP[key] || null;
 }
 
+const I18N = {
+  en: {
+    tracker: 'SEAL TRACKER',
+    checkMySeal: 'CHECK MY SEAL',
+    prompt: "Enter your seal number to see when it's due back.",
+    sealPlaceholder: 'Seal #',
+    check: 'CHECK',
+    yourSeal: 'YOUR SEAL',
+    remaining: 'REMAINING',
+    dueBack: 'DUE BACK',
+    returnMsg: 'Please return your seal to the <strong>front counter</strong> before your time is up.',
+    notRented: 'NOT CURRENTLY RENTED',
+    notRentedMsg: "This seal isn't checked out right now. Please double-check your seal number, or visit the front counter for help.",
+    refresh: '↻ REFRESH',
+    differentSeal: 'Different seal',
+    back: 'Back',
+    inUse: 'IN USE',
+    timesUp: "TIME'S UP",
+    notInUse: 'NOT IN USE',
+    pastDue: 'PAST DUE',
+    min: 'min',
+    enterSealNum: 'Enter your seal number',
+    sealNotFound: id => `We couldn't find seal "${id}" — check with the front counter.`
+  },
+  es: {
+    tracker: 'RASTREADOR DE FOCAS',
+    checkMySeal: 'MI FOCA',
+    prompt: 'Ingrese el número de su foca para ver cuándo debe devolverla.',
+    sealPlaceholder: 'Foca #',
+    check: 'BUSCAR',
+    yourSeal: 'SU FOCA',
+    remaining: 'RESTANTE',
+    dueBack: 'DEVOLVER A LAS',
+    returnMsg: 'Por favor devuelva su foca al <strong>mostrador principal</strong> antes de que se acabe el tiempo.',
+    notRented: 'NO ESTÁ EN USO',
+    notRentedMsg: 'Esta foca no está alquilada ahora. Verifique el número de su foca o visite el mostrador principal para obtener ayuda.',
+    refresh: '↻ ACTUALIZAR',
+    differentSeal: 'Otra foca',
+    back: 'Atrás',
+    inUse: 'EN USO',
+    timesUp: 'TIEMPO AGOTADO',
+    notInUse: 'NO ESTÁ EN USO',
+    pastDue: 'ATRASADA',
+    min: 'min',
+    enterSealNum: 'Ingrese el número de su foca',
+    sealNotFound: id => `No encontramos la foca "${id}" — pregunte en el mostrador principal.`
+  }
+};
+
+let currentLang = 'en';
+
+function applyLanguage(lang) {
+  currentLang = lang;
+  const dict = I18N[lang];
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (dict[key]) el.innerHTML = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key]) el.placeholder = dict[key];
+  });
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  document.documentElement.lang = lang;
+
+  try { localStorage.setItem('customerLang', lang); } catch (e) {}
+
+  const snap = window.__lastSnapshot;
+  if (snap !== undefined) renderSealStatus(snap);
+}
+
 let db = null;
 let currentSealId = null;
 let currentUnsub = null;
 let refreshInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  let saved = 'en';
+  try { saved = localStorage.getItem('customerLang') || 'en'; } catch (e) {}
+  if (!I18N[saved]) saved = 'en';
+  applyLanguage(saved);
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+  });
+
   const app = initializeApp(FIREBASE_CONFIG);
   db = getDatabase(app);
 
@@ -64,17 +153,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function doLookup() {
+  const dict = I18N[currentLang];
   const raw = document.getElementById('sealInput').value.trim();
   const errEl = document.getElementById('lookupError');
   errEl.textContent = '';
 
   if (!raw) {
-    errEl.textContent = 'Enter your seal number';
+    errEl.textContent = dict.enterSealNum;
     return;
   }
   const canon = canonicalSealId(raw);
   if (!canon) {
-    errEl.textContent = `We couldn't find seal "${raw}" — check with the front counter.`;
+    errEl.textContent = dict.sealNotFound(raw);
     return;
   }
 
@@ -108,13 +198,14 @@ function subscribeToSeal(sealId) {
 
 function renderSealStatus(seal) {
   window.__lastSnapshot = seal;
+  const dict = I18N[currentLang];
 
   const tagWrap = document.getElementById('statusTagWrap');
   const activeBlock = document.getElementById('statusActive');
   const inactiveBlock = document.getElementById('statusInactive');
 
   if (!seal || seal.status !== 'Active') {
-    tagWrap.innerHTML = '<div class="seal-status-tag inactive">NOT IN USE</div>';
+    tagWrap.innerHTML = `<div class="seal-status-tag inactive">${dict.notInUse}</div>`;
     activeBlock.style.display = 'none';
     inactiveBlock.style.display = 'block';
     return;
@@ -129,7 +220,7 @@ function renderSealStatus(seal) {
 
   const dueBackDisplay = seal.expiration
     || (seal.expirationTimestamp
-        ? new Date(seal.expirationTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        ? new Date(seal.expirationTimestamp).toLocaleTimeString(currentLang === 'es' ? 'es-MX' : 'en-US', { hour: 'numeric', minute: '2-digit' })
         : '—');
 
   activeBlock.style.display = 'block';
@@ -139,21 +230,21 @@ function renderSealStatus(seal) {
   const caption = document.getElementById('statusTimeCaption');
 
   if (minsRemaining > 0) {
-    tagWrap.innerHTML = '<div class="seal-status-tag active">IN USE</div>';
+    tagWrap.innerHTML = `<div class="seal-status-tag active">${dict.inUse}</div>`;
     bigTime.className = 'big-time green';
     if (minsRemaining >= 60) {
       const h = Math.floor(minsRemaining / 60);
       const m = minsRemaining % 60;
       bigTime.textContent = `${h}h ${m}m`;
     } else {
-      bigTime.textContent = `${minsRemaining} min`;
+      bigTime.textContent = `${minsRemaining} ${dict.min}`;
     }
-    caption.textContent = 'REMAINING';
+    caption.textContent = dict.remaining;
   } else {
-    tagWrap.innerHTML = '<div class="seal-status-tag expired">TIME&#39;S UP</div>';
+    tagWrap.innerHTML = `<div class="seal-status-tag expired">${dict.timesUp}</div>`;
     bigTime.className = 'big-time gold';
-    bigTime.textContent = `${Math.abs(minsRemaining)} min`;
-    caption.textContent = 'PAST DUE';
+    bigTime.textContent = `${Math.abs(minsRemaining)} ${dict.min}`;
+    caption.textContent = dict.pastDue;
   }
 
   document.getElementById('statusDueBack').textContent = dueBackDisplay;
