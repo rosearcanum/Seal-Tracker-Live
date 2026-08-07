@@ -103,6 +103,7 @@ let firebaseReady    = false;
 let chatDb           = null;
 let lastFirebaseUpdate = 0; // throttle UI repaints
 let undoStack        = []; // last 5 reversible actions
+let redoStack        = []; // actions that were undone (redo them with Ctrl+Y)
 let partyRoomFilter  = null; // null = show all rooms, otherwise a specific room string
 
 // ============================================================
@@ -487,29 +488,175 @@ function findActiveRentalId(canonicalId) {
 }
 
 // ============================================================
-//  UNDO — track last 5 reversible actions
+//  UNDO / REDO — track last 5 reversible actions
 // ============================================================
 const UNDO_MAX = 5;
 
 function pushUndo(action) {
   undoStack.push(action);
   if (undoStack.length > UNDO_MAX) undoStack.shift();
+  // New action taken → forget any redo history
+  redoStack = [];
   renderUndoButton();
 }
 
 function renderUndoButton() {
-  const btn = document.getElementById('undoBtn');
-  if (!btn) return;
-  if (undoStack.length === 0) {
-    btn.style.display = 'none';
-  } else {
-    btn.style.display = 'inline-flex';
-    const last = undoStack[undoStack.length - 1];
-    let label = 'UNDO';
-    if (last.type === 'return')   label = `↶ UNDO RETURN ${last.sealId}`;
-    if (last.type === 'activate') label = `↶ UNDO ACTIVATE ${last.sealId}`;
-    if (last.type === 'extend')   label = `↶ UNDO ${last.mins > 0 ? '+' : ''}${last.mins}m ON ${last.sealId}`;
-    btn.textContent = label;
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+
+  if (undoBtn) {
+    if (undoStack.length === 0) {
+      undoBtn.style.display = 'none';
+    } else {
+      undoBtn.style.display = 'inline-flex';
+      const last = undoStack[undoStack.length - 1];
+      let label = 'UNDO';
+      if (last.type === 'return')   label = `↶ UNDO RETURN ${last.sealId}`;
+      if (last.type === 'activate') label = `↶ UNDO ACTIVATE ${last.sealId}`;
+      if (last.type === 'extend')   label = `↶ UNDO ${last.mins > 0 ? '+' : ''}${last.mins}m ON ${last.sealId}`;
+      undoBtn.textContent = label;
+    }
+  }
+
+  if (redoBtn) {
+    if (redoStack.length === 0) {
+      redoBtn.style.display = 'none';
+    } else {
+      redoBtn.style.display = 'inline-flex';
+      const last = redoStack[redoStack.length - 1];
+      let label = 'REDO';
+      if (last.type === 'return')   label = `↷ REDO RETURN ${last.sealId}`;
+      if (last.type === 'activate') label = `↷ REDO ACTIVATE ${last.sealId}`;
+      if (last.type === 'extend')   label = `↷ REDO ${last.mins > 0 ? '+' : ''}${last.mins}m ON ${last.sealId}`;
+      redoBtn.textContent = label;
+    }
+  }
+}
+
+// Reverses an action. Returns true on success so callers can decide whether to
+// move the action to the opposite stack.
+async function reverseAction(action) {
+  if (action.type === 'return') {
+    sealData[action.sealId] = action.prevSeal;
+    updateAllViews();
+    await fbSetSeal(action.sealId, action.prevSeal);
+    if (action.rentalId) {
+      await fbLogRental({
+        id: action.rentalId,
+        returnedAt: null,
+        returnedAtDisplay: null
+      });
+    }
+    const isParty = action.prevSeal.isParty || isPartySeal(action.sealId);
+    apiCall({
+      action: 'activate',
+      sealId: action.sealId,
+      additionalTime: parseInt(action.prevSeal.additionalTime) || 0,
+      notes: action.prevSeal.notes || '',
+      sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
+    }).catch(err => console.warn('Sheets sync failed:', err.message));
+  }
+  else if (action.type === 'activate') {
+    delete sealData[action.sealId];
+    updateAllViews();
+    await fbRemoveSeal(action.sealId);
+    if (action.rentalId) {
+      try { await fbLogRental({ id: action.rentalId, _undone: true }); } catch (e) {}
+    }
+    const isParty = isPartySeal(action.sealId);
+    apiCall({
+      action: isParty ? 'returnParty' : 'return',
+      sealId: action.sealId,
+      sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
+    }).catch(err => console.warn('Sheets sync failed:', err.message));
+  }
+  else if (action.type === 'extend') {
+    sealData[action.sealId] = action.prevSeal;
+    updateAllViews();
+    await fbSetSeal(action.sealId, action.prevSeal);
+    if (action.rentalId) {
+      await fbLogRental({
+        id: action.rentalId,
+        extensions: action.prevExtensions,
+        currentDueAt: action.prevSeal.expirationTimestamp,
+        currentDueAtDisplay: action.prevSeal.expiration
+      });
+    }
+    if (!isPartySeal(action.sealId)) {
+      apiCall({
+        action: 'extend',
+        sealId: action.sealId,
+        additionalTime: -action.mins,
+        sheet: 'DATA'
+      }).catch(err => console.warn('Sheets sync failed:', err.message));
+    }
+  }
+}
+
+// Re-applies a previously undone action, using the "after" snapshot captured
+// at the moment the action was originally performed.
+async function reapplyAction(action) {
+  if (action.type === 'return') {
+    delete sealData[action.sealId];
+    updateAllViews();
+    await fbRemoveSeal(action.sealId);
+    if (action.rentalId) {
+      const now = new Date();
+      await fbLogRental({
+        id: action.rentalId,
+        returnedAt: now.toISOString(),
+        returnedAtDisplay: now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })
+      });
+    }
+    const isParty = action.prevSeal?.isParty || isPartySeal(action.sealId);
+    apiCall({
+      action: isParty ? 'returnParty' : 'return',
+      sealId: action.sealId,
+      sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
+    }).catch(err => console.warn('Sheets sync failed:', err.message));
+  }
+  else if (action.type === 'activate') {
+    if (action.postSeal) {
+      sealData[action.sealId] = action.postSeal;
+      updateAllViews();
+      await fbSetSeal(action.sealId, action.postSeal);
+    }
+    const isParty = isPartySeal(action.sealId);
+    apiCall({
+      action: 'activate',
+      sealId: action.sealId,
+      additionalTime: parseInt(action.postSeal?.additionalTime) || 0,
+      notes: action.postSeal?.notes || '',
+      sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
+    }).catch(err => console.warn('Sheets sync failed:', err.message));
+  }
+  else if (action.type === 'extend') {
+    if (action.postSeal) {
+      sealData[action.sealId] = action.postSeal;
+      updateAllViews();
+      await fbSetSeal(action.sealId, action.postSeal);
+    }
+    if (action.rentalId) {
+      const exts = (action.prevExtensions || []).slice();
+      exts.push({
+        mins: action.mins,
+        time: new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })
+      });
+      await fbLogRental({
+        id: action.rentalId,
+        extensions: exts,
+        currentDueAt: action.postSeal?.expirationTimestamp,
+        currentDueAtDisplay: action.postSeal?.expiration
+      });
+    }
+    if (!isPartySeal(action.sealId)) {
+      apiCall({
+        action: 'extend',
+        sealId: action.sealId,
+        additionalTime: action.mins,
+        sheet: 'DATA'
+      }).catch(err => console.warn('Sheets sync failed:', err.message));
+    }
   }
 }
 
@@ -517,69 +664,39 @@ async function performUndo() {
   if (!isAuthenticated) { toast('🔒 Staff login required', 'error'); return; }
   if (undoStack.length === 0) return;
   const action = undoStack.pop();
+  redoStack.push(action);
+  if (redoStack.length > UNDO_MAX) redoStack.shift();
   renderUndoButton();
 
   try {
-    if (action.type === 'return') {
-      sealData[action.sealId] = action.prevSeal;
-      updateAllViews();
-      await fbSetSeal(action.sealId, action.prevSeal);
-      if (action.rentalId) {
-        await fbLogRental({
-          id: action.rentalId,
-          returnedAt: null,
-          returnedAtDisplay: null
-        });
-      }
-      const isParty = action.prevSeal.isParty || isPartySeal(action.sealId);
-      apiCall({
-        action: 'activate',
-        sealId: action.sealId,
-        additionalTime: parseInt(action.prevSeal.additionalTime) || 0,
-        notes: action.prevSeal.notes || '',
-        sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
-      }).catch(err => console.warn('Sheets undo sync failed:', err.message));
-      toast(`Undo: seal ${action.sealId} restored`, 'success');
-    }
-    else if (action.type === 'activate') {
-      delete sealData[action.sealId];
-      updateAllViews();
-      await fbRemoveSeal(action.sealId);
-      if (action.rentalId) {
-        try { await fbLogRental({ id: action.rentalId, _undone: true }); } catch (e) {}
-      }
-      const isParty = isPartySeal(action.sealId);
-      apiCall({
-        action: isParty ? 'returnParty' : 'return',
-        sealId: action.sealId,
-        sheet: isParty ? PARTY_SHEET_NAME : 'DATA'
-      }).catch(err => console.warn('Sheets undo sync failed:', err.message));
-      toast(`Undo: seal ${action.sealId} deactivated`, 'success');
-    }
-    else if (action.type === 'extend') {
-      sealData[action.sealId] = action.prevSeal;
-      updateAllViews();
-      await fbSetSeal(action.sealId, action.prevSeal);
-      if (action.rentalId) {
-        await fbLogRental({
-          id: action.rentalId,
-          extensions: action.prevExtensions,
-          currentDueAt: action.prevSeal.expirationTimestamp,
-          currentDueAtDisplay: action.prevSeal.expiration
-        });
-      }
-      if (!isPartySeal(action.sealId)) {
-        apiCall({
-          action: 'extend',
-          sealId: action.sealId,
-          additionalTime: -action.mins,
-          sheet: 'DATA'
-        }).catch(err => console.warn('Sheets undo sync failed:', err.message));
-      }
-      toast(`Undo: reverted ${action.mins > 0 ? '+' : ''}${action.mins}m on ${action.sealId}`, 'success');
-    }
+    await reverseAction(action);
+    let msg = 'Undo';
+    if (action.type === 'return')   msg = `Undo: seal ${action.sealId} restored`;
+    if (action.type === 'activate') msg = `Undo: seal ${action.sealId} deactivated`;
+    if (action.type === 'extend')   msg = `Undo: reverted ${action.mins > 0 ? '+' : ''}${action.mins}m on ${action.sealId}`;
+    toast(msg, 'success');
   } catch (err) {
     toast(`Undo failed: ${err.message}`, 'error');
+  }
+}
+
+async function performRedo() {
+  if (!isAuthenticated) { toast('🔒 Staff login required', 'error'); return; }
+  if (redoStack.length === 0) return;
+  const action = redoStack.pop();
+  undoStack.push(action);
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  renderUndoButton();
+
+  try {
+    await reapplyAction(action);
+    let msg = 'Redo';
+    if (action.type === 'return')   msg = `Redo: seal ${action.sealId} returned`;
+    if (action.type === 'activate') msg = `Redo: seal ${action.sealId} activated`;
+    if (action.type === 'extend')   msg = `Redo: ${action.mins > 0 ? '+' : ''}${action.mins}m on ${action.sealId}`;
+    toast(msg, 'success');
+  } catch (err) {
+    toast(`Redo failed: ${err.message}`, 'error');
   }
 }
 
@@ -688,6 +805,7 @@ async function doActivate(canonId, addTime, notes) {
     pushUndo({
       type: 'activate',
       sealId: canonId,
+      postSeal: sealRecord,
       rentalId: findActiveRentalId(canonId)
     });
   } catch (err) {
@@ -807,6 +925,7 @@ async function doExtend(canonId, mins) {
     sealId: canonId,
     mins,
     prevSeal,
+    postSeal: updated,
     prevExtensions,
     rentalId
   });
@@ -1134,18 +1253,33 @@ function setupModal() {
 }
 
 function setupUndo() {
-  const btn = document.getElementById('undoBtn');
-  if (btn) btn.addEventListener('click', performUndo);
+  const undoBtn = document.getElementById('undoBtn');
+  if (undoBtn) undoBtn.addEventListener('click', performUndo);
+
+  const redoBtn = document.getElementById('redoBtn');
+  if (redoBtn) redoBtn.addEventListener('click', performRedo);
 
   document.addEventListener('keydown', e => {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const isUndo = (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z');
-    if (!isUndo) return;
+    const modKey = isMac ? e.metaKey : e.ctrlKey;
+    if (!modKey) return;
     const target = e.target;
     const tag = target?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
-    e.preventDefault();
-    performUndo();
+
+    const key = e.key.toLowerCase();
+    // Ctrl+Z (or Cmd+Z) — undo
+    if (key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      performUndo();
+      return;
+    }
+    // Ctrl+Y — redo (also Cmd+Shift+Z on Mac)
+    if (key === 'y' || (key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      performRedo();
+      return;
+    }
   });
 
   renderUndoButton();
