@@ -75,25 +75,41 @@
       min-height: 20px; margin-top: 10px;
     }
 
-    /* Language toggle button */
+    /* Language toggle — flag icons */
     .lang-toggle {
       position: absolute; top: 20px; right: 20px;
-      display: flex; gap: 4px;
+      display: flex; gap: 6px;
       background: var(--panel); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 3px;
+      border-radius: 999px; padding: 4px;
       z-index: 20;
+      box-shadow: var(--shadow);
     }
     .lang-btn {
-      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
-      letter-spacing: 1px; padding: 5px 9px;
-      color: var(--text-muted); background: transparent; border: none;
-      border-radius: 4px; cursor: pointer;
-      transition: all 0.15s;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; padding: 0;
+      background: transparent; border: none;
+      border-radius: 50%; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      opacity: 0.55;
       -webkit-tap-highlight-color: transparent;
     }
-    .lang-btn:hover { color: var(--text); }
+    .lang-btn img {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: block; pointer-events: none;
+    }
+    .lang-btn:hover { opacity: 0.85; transform: scale(1.06); }
     .lang-btn.active {
-      color: var(--bg); background: var(--ice);
+      opacity: 1;
+      box-shadow: 0 0 0 2px var(--ice), 0 0 12px var(--ice-glow);
+    }
+
+    @media (max-width: 480px) {
+      .lang-toggle {
+        position: static;
+        margin: 0 auto 18px;
+        justify-content: center;
+        width: fit-content;
+      }
     }
 
     /* Status screen */
@@ -192,8 +208,12 @@
 </head>
 <body>
   <div class="lang-toggle">
-    <button class="lang-btn active" data-lang="en">EN</button>
-    <button class="lang-btn" data-lang="es">ES</button>
+    <button class="lang-btn active" data-lang="en" aria-label="English">
+      <img src="data:image/png;base64,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" alt="English" />
+    </button>
+    <button class="lang-btn" data-lang="es" aria-label="Español">
+      <img src="data:image/png;base64,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" alt="Español" />
+    </button>
   </div>
 
   <div class="customer-wrap">
