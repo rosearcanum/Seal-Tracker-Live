@@ -22,7 +22,7 @@ const MIAMI_SEALS = [
   '37','38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56',
   '57','58','59','60',
   'A','B','C','D','E','I','J','K','L','M','N','O','P','Q','S','T','U','V','X','Y','Z',
-  'Star','Octagon','Triangle','$','Sun'
+  'Star','Octagon','Triangle','Dollar Sign','Sun'
 ];
 
 const SEAL_LOOKUP = {};
