@@ -765,3 +765,40 @@ body.light-mode header { background: linear-gradient(135deg, #0a3d6b 0%, #1565a8
   transition: opacity 0.2s, transform 0.15s;
 }
 .logo-link:hover { opacity: 0.85; transform: scale(1.05); }
+
+/* Undo button */
+.btn-undo {
+  font-family: var(--font-ui); font-weight: 600; font-size: 11px; letter-spacing: 1px;
+  color: var(--gold); background: var(--gold-bg); border: 1px solid var(--gold-dim);
+  border-radius: var(--radius); padding: 6px 12px; cursor: pointer; white-space: nowrap;
+  align-items: center; gap: 6px;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-undo:hover { color: var(--bg); background: var(--gold); border-color: var(--gold); }
+
+/* Party room filter buttons */
+.party-room-filter {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 12px; margin-bottom: 10px;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.room-filter-btn {
+  font-family: var(--font-ui); font-weight: 600; font-size: 11px; letter-spacing: 1px;
+  color: var(--text-dim); background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 12px; cursor: pointer; white-space: nowrap;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.room-filter-btn:hover { color: var(--orange); border-color: var(--orange); }
+.room-filter-btn.active {
+  color: #000; background: var(--orange); border-color: var(--orange);
+  box-shadow: 0 0 10px rgba(255,140,0,0.25);
+}
+
+@media (max-width: 480px) {
+  .btn-undo { font-size: 10px; padding: 5px 8px; }
+  .party-room-filter { padding: 8px 10px; gap: 5px; }
+  .room-filter-btn { font-size: 10px; padding: 5px 10px; }
+}
